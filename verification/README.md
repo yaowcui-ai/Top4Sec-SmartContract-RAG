@@ -11,6 +11,8 @@
 | 真页面 | 通过 | 登录、已有答案、引用展开、历史定位、刷新与退出，不额外提问 |
 | 启停与持久化 | 通过 | PowerShell 后端、全 Docker、全部停止再启动、读取同一已保存结果，见 lifecycle.json |
 | 数据库备份 | 通过 | 新数据库独立导出，UTF-8 可解码且含实际问答；私有 SQL 不公开 |
+| GitHub Linux CI | 通过 | [backend-tests](https://github.com/yaowcui-ai/Top4Sec-SmartContract-RAG/actions/workflows/tests.yml) |
+| 公开仓库重新克隆 | 5 passed | 首次配置与缺失资料回归；没有本机索引时显示 0 篇可问答 |
 
 ## 索引验收
 
