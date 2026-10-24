@@ -1,0 +1,11 @@
+* text=auto
+*.py text eol=lf
+*.js text eol=lf
+*.cjs text eol=lf
+*.yml text eol=lf
+*.png binary
+*.docx binary
+# Preserve upstream snapshots and vendor hashes byte-for-byte.
+data/source/catalog.README.md -text -whitespace
+data/source/catalog.LICENSE -text -whitespace
+app/web/vendor/* -text -whitespace

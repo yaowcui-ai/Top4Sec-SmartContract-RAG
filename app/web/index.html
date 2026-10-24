@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>四大顶会区块链智能合约论文问答系统</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script type="module" src="/static/app.js"></script>
+</head>
+<body>
+<aside class="sidebar">
+  <a class="brand" href="/">S<span>4</span><small>SECURITY PAPER READER</small></a>
+  <p class="side-caption">阅读论文，回到证据。</p>
+  <div class="venues"><span>IEEE S&amp;P</span><span>ACM CCS</span><span>USENIX Security</span><span>NDSS</span></div>
+  <div class="side-heading"><h2>个人历史</h2><button id="refresh-history" disabled>刷新</button></div>
+  <p id="history-status" class="muted">登录后查看自己的问答。</p>
+  <ul id="history-list"></ul>
+  <button id="history-more" class="side-button" hidden>加载更早记录</button>
+  <p class="side-footer">独立知识库 · 来源与页码追溯<br>论文目录来自 Academic Smart Contract Papers</p>
+</aside>
+<main>
+  <header class="topbar"><span>TOP 4 SECURITY / PAPER WORKSPACE</span><span id="index-badge">正在读取知识库状态…</span></header>
+  <div class="content">
+    <section class="intro"><span class="eyebrow">BLOCKCHAIN × SMART CONTRACTS</span><h1>四大顶会区块链<br>智能合约论文问答系统</h1><p>围绕方法、实验与局限提问，用论文原文验证每一条回答。</p></section>
+    <section class="account">
+      <form id="login-form"><label>用户名<input id="username" value="researcher" autocomplete="username" required maxlength="32"></label><label>密码<input id="password" type="password" autocomplete="current-password" required maxlength="128"></label><button id="login-button" type="submit">登录</button></form>
+      <div id="signed-in" hidden><span id="account-name"></span><button id="logout-button" class="secondary">退出登录</button></div>
+      <p id="auth-status" role="status">账号由本项目的独立配置创建，不使用原 DocTrace 账号。</p>
+    </section>
+    <section class="library">
+      <div class="section-title"><h2>论文目录</h2><span id="catalog-count" class="muted"></span></div>
+      <div class="filters"><label>会议<select id="venue"><option value="">全部四个会议</option><option value="SP">IEEE S&amp;P</option><option value="CCS">ACM CCS</option><option value="USENIX">USENIX Security</option><option value="NDSS">NDSS</option></select></label><label>年份<select id="year"><option value="">全部年份</option></select></label><label class="search-label">标题<input id="search" placeholder="搜索论文标题"></label><button id="search-button" class="secondary">搜索</button></div>
+      <p class="muted">只有“全文已索引”的论文参与问答。会议、年份采用来源目录标签；缺失和失效链接保留状态。</p>
+      <div id="paper-list" class="paper-list"></div><button id="papers-more" class="secondary" hidden>查看更多论文</button>
+    </section>
+    <section class="chat" aria-label="论文问答">
+      <div class="section-title"><h2>论文对话</h2><span class="muted">文字证据 · PDF 页码 · 原文引用</span></div>
+      <p id="empty-chat" class="empty">选择论文，或从一个具体问题开始。</p>
+      <div id="conversation" role="log" aria-live="polite"></div>
+      <form id="question-form" class="composer">
+        <label for="question">你想了解什么？</label>
+        <textarea id="question" rows="4" maxlength="2000" required disabled placeholder="例如：SmartPulse 如何验证智能合约的时序性质？请区分方法和适用范围，并给出原文依据。"></textarea>
+        <div class="composer-row"><label>检索模式<select id="mode" disabled><option value="naive">向量检索 · naive</option><option value="mix">图与向量混合 · mix</option></select></label><button id="submit-question" disabled>提交问题 ↗</button></div>
+        <p class="muted">会议与年份同时约束本次问答范围。mix 的图谱是论文、会议、年份和全文片段的结构关系，不是自动抽取的漏洞语义图谱。</p>
+      </form>
+      <div id="pending-panel" hidden><p>有一条尚未确认完成的提问，刷新不会自动重发。</p><p id="pending-question"></p><button id="retry-pending">重试原操作</button><button id="end-pending" class="secondary">结束跟踪</button></div>
+    </section>
+    <p id="request-status" role="status"></p><div id="error" role="alert" hidden></div>
+    <footer>基于可取得的论文全文文本。图表和公式未进行视觉解析；不能据此推断未提供的实验结果。</footer>
+  </div>
+</main>
+</body></html>

@@ -1,0 +1,27 @@
+{
+  "kind": "isolated_synthetic_browser",
+  "checks": [
+    "isolated fixture starts",
+    "anonymous QA disabled",
+    "loading page never asks a model",
+    "credential HttpOnly",
+    "Markdown safely rendered",
+    "citation opens its own paper excerpt",
+    "new question appends rather than replacing",
+    "both modes transmitted exactly",
+    "history selection de-duplicates",
+    "history focuses selected conversation",
+    "refresh restores saved personal QA",
+    "refresh sends no paid requests",
+    "saved timeout record replaces the same waiting bubble without duplication",
+    "failure preserves the operation for explicit handling",
+    "ending tracking is explicit and sends nothing",
+    "logout clears private conversation",
+    "another user cannot see prior user messages",
+    "foreign request ID rejected by API",
+    "mobile width fits",
+    "no browser JavaScript exceptions"
+  ],
+  "provider_calls": 0,
+  "status": "passed"
+}

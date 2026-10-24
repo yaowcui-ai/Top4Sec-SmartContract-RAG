@@ -1,0 +1,45 @@
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),net=require('node:net');
+const {spawn}=require('node:child_process');
+let chromium;try{({chromium}=require('playwright-core'));}catch{({chromium}=require(path.join(os.tmpdir(),'doctrace-browser-check/node_modules/playwright-core')));}
+const root=path.resolve(__dirname,'..'),temp=fs.mkdtempSync(path.join(os.tmpdir(),'scpaper-browser-'));
+const report={kind:'isolated_synthetic_browser',checks:[],provider_calls:0,status:'started'};
+const check=(ok,name)=>{if(!ok)throw new Error(name);report.checks.push(name);};
+const delay=ms=>new Promise(r=>setTimeout(r,ms));let child,browser;
+(async()=>{try{
+ const port=await new Promise(resolve=>{const s=net.createServer();s.listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>resolve(p));});});
+ const python=path.join(root,'.venv',process.platform==='win32'?'Scripts/python.exe':'bin/python');
+ child=spawn(python,['tests/browser_fixture.py',temp,String(port)],{cwd:root,env:{...process.env,PYTHONPATH:root},windowsHide:true,stdio:'ignore'});
+ const base=`http://127.0.0.1:${port}`;let ready=false;for(let i=0;i<70;i++){try{if((await fetch(base+'/health')).ok){ready=true;break;}}catch{}await delay(100);}check(ready,'isolated fixture starts');
+ browser=await chromium.launch({channel:process.platform==='win32'?'msedge':'chromium',headless:true});
+ const page=await browser.newPage({viewport:{width:1440,height:1000}});const errors=[],posts=[];
+ page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(r.url().endsWith('/api/ask')&&r.method()==='POST')posts.push(r.postDataJSON());});
+ await page.goto(base);await page.waitForSelector('.paper-card');
+ check(await page.locator('#submit-question').isDisabled(),'anonymous QA disabled');
+ check(posts.length===0,'loading page never asks a model');
+ const login=async name=>{await page.fill('#username',name);await page.fill('#password','TestPass8');await page.click('#login-button');await page.waitForFunction(n=>document.getElementById('account-name').textContent.includes(n),name);};
+ await login('alice');check(!(await page.evaluate(()=>document.cookie)).includes('scpaper_session'),'credential HttpOnly');
+ const submit=async(question,mode)=>{await page.fill('#question',question);await page.selectOption('#mode',mode);await page.click('#submit-question');await page.waitForFunction(()=>!document.getElementById('submit-question').disabled);};
+ await submit('First synthetic question','naive');await page.waitForSelector('.citation');
+ check(await page.locator('.answer-content strong').count()===1,'Markdown safely rendered');
+ await page.locator('.citation').first().click();check(await page.locator('.references details').first().evaluate(e=>e.open),'citation opens its own paper excerpt');
+ await submit('Second synthetic question','mix');check(await page.locator('.turn').count()===2,'new question appends rather than replacing');
+ check(posts[0].mode==='naive'&&posts[1].mode==='mix','both modes transmitted exactly');
+ const first=await page.locator('.turn').first().getAttribute('data-id');
+ await page.locator(`#history-list button[data-id="${first}"]`).click();check(await page.locator('.turn').count()===2,'history selection de-duplicates');
+ check(await page.evaluate(id=>document.activeElement.dataset.id===id,first),'history focuses selected conversation');
+ await page.reload();await page.waitForSelector('.turn');check(await page.locator('.turn').count()===2,'refresh restores saved personal QA');
+ check(posts.length===2,'refresh sends no paid requests');
+ await submit('Synthetic timeout test','naive');
+ await page.waitForFunction(()=>!document.getElementById('error').hidden);
+ check(await page.locator('.turn').count()===3,'saved timeout record replaces the same waiting bubble without duplication');
+ check(await page.locator('#pending-panel').isVisible(),'failure preserves the operation for explicit handling');
+ await page.click('#end-pending');check(await page.locator('#pending-panel').isHidden(),'ending tracking is explicit and sends nothing');
+ await page.click('#logout-button');await page.waitForFunction(()=>!document.getElementById('login-form').hidden);
+ check(await page.locator('.turn').count()===0,'logout clears private conversation');
+ await login('bob');check(await page.locator('.turn').count()===0,'another user cannot see prior user messages');
+ const foreign=await page.evaluate(async id=>(await fetch('/api/history/'+id)).status,first);check(foreign===404,'foreign request ID rejected by API');
+ await page.setViewportSize({width:390,height:844});check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'mobile width fits');
+ check(errors.length===0,'no browser JavaScript exceptions');report.status='passed';
+}catch(e){report.status='failed';report.error=e.stack;process.exitCode=1;}finally{
+ if(browser)await browser.close();if(child)child.kill();const dir=path.join(root,'verification');fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'browser.json'),JSON.stringify(report,null,2));console.log('Status:',report.status,'Checks:',report.checks.length);if(report.error)console.log(report.error);
+}})();

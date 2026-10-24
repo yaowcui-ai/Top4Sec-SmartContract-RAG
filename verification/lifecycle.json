@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "native_powershell_start_verified": true,
+  "all_services_stopped_and_restarted": true,
+  "full_docker_start_verified": true,
+  "indexed_papers_after_restart": 126,
+  "saved_completed_answers_reused": 2,
+  "history_count_including_retained_failure": 3,
+  "new_generation_calls": 0,
+  "utf8_database_backup_verified": true
+}

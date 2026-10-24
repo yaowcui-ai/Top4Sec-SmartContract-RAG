@@ -1,0 +1,11 @@
+.git
+.env
+.lightrag.env
+.venv
+runtime
+data
+docs
+tests
+verification
+node_modules
+__pycache__

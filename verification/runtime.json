@@ -1,0 +1,84 @@
+{
+  "kind": "real_provider_smoke_not_quality_benchmark",
+  "created_at": "20261024T041926Z",
+  "retrieval": [
+    {
+      "venue": "SP",
+      "mode": "naive",
+      "expected_paper": "sp_2021_e22b16be2f2d",
+      "chunk_count": 44,
+      "expected_paper_chunks": 33,
+      "entity_count": 0,
+      "relationship_count": 0,
+      "passed": true
+    },
+    {
+      "venue": "CCS",
+      "mode": "naive",
+      "expected_paper": "ccs_2018_bd87acda4541",
+      "chunk_count": 44,
+      "expected_paper_chunks": 18,
+      "entity_count": 0,
+      "relationship_count": 0,
+      "passed": true
+    },
+    {
+      "venue": "USENIX",
+      "mode": "mix",
+      "expected_paper": "usenix_2020_972e960bafb5",
+      "chunk_count": 35,
+      "expected_paper_chunks": 32,
+      "entity_count": 12,
+      "relationship_count": 45,
+      "passed": true
+    },
+    {
+      "venue": "NDSS",
+      "mode": "mix",
+      "expected_paper": "ndss_2019_a3ab392d0155",
+      "chunk_count": 34,
+      "expected_paper_chunks": 29,
+      "entity_count": 12,
+      "relationship_count": 50,
+      "passed": true
+    }
+  ],
+  "answers": [
+    {
+      "venue": "SP",
+      "mode": "naive",
+      "status": "completed",
+      "references": 7,
+      "expected_paper_present": true,
+      "citation_ids_valid": true,
+      "pdf_served": true,
+      "idempotent_reuse": true,
+      "rerank_degraded": false,
+      "seconds": 12.985
+    },
+    {
+      "venue": "NDSS",
+      "mode": "mix",
+      "status": "completed",
+      "references": 8,
+      "expected_paper_present": true,
+      "citation_ids_valid": true,
+      "pdf_served": true,
+      "idempotent_reuse": true,
+      "rerank_degraded": false,
+      "seconds": 12.047
+    }
+  ],
+  "status": "passed",
+  "index": {
+    "status": "verified",
+    "index_id": "add5fc487098b4a5d479faf3808feb454ea542580ef90ca60ee173ad593d5a65",
+    "chunk_count": 4349,
+    "node_count": 4490,
+    "edge_count": 4601,
+    "graph_kind": "bibliographic_and_page_structure"
+  },
+  "indexed_papers": 126,
+  "limitation": "Checks connectivity, source mapping and application behavior; does not prove factual correctness or compare retrieval quality.",
+  "note": "Four retrieval probes preserved from the first run; generation repeated only after the desktop-proxy TLS fault was isolated and fixed. Initial generation failure is retained in private records."
+}

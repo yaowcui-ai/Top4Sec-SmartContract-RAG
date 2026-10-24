@@ -1,0 +1,55 @@
+name: scpaper-rag
+services:
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "127.0.0.1:3308:3306"
+    environment:
+      MYSQL_DATABASE: smartcontract_papers
+      MYSQL_USER: scpaper_app
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?run init_config first}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?run init_config first}
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci"]
+    volumes:
+      - ./runtime/mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+  lightrag:
+    image: ghcr.io/hkuds/lightrag@sha256:5bdbd524931b011df246fe20888d110cef691e6804c12cde636a2b746d7de27e
+    ports:
+      - "127.0.0.1:9630:9621"
+    env_file: .lightrag.env
+    environment:
+      WORKSPACE: smartcontract_top4_v1
+      WORKING_DIR: /app/data/rag_storage
+      INPUT_DIR: /app/data/inputs
+      WEBUI_TITLE: 四大顶会区块链智能合约论文知识库
+    volumes:
+      - ./.lightrag.env:/app/.env:ro
+      - ./runtime/lightrag:/app/data/rag_storage
+      - ./runtime/inputs:/app/data/inputs
+    restart: unless-stopped
+  app:
+    profiles: ["full"]
+    build: .
+    ports:
+      - "127.0.0.1:8003:8003"
+    env_file: .env
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      LIGHTRAG_URL: http://lightrag:9621
+      DATA_DIR: /app/data
+    volumes:
+      - ./data:/app/data:ro
+      - ./runtime/logs:/app/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+      lightrag:
+        condition: service_started
+    restart: unless-stopped
