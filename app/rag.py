@@ -53,6 +53,8 @@ def rerank_candidates(client,settings,question,chunks):
 
 def catalog_data(settings):
     path=settings.data_dir/'manifest.json';receipt=settings.data_dir/'index_receipt.json'
+    if (settings.data_dir/'.live_manifest.json').exists():path=settings.data_dir/'.live_manifest.json'
+    if (settings.data_dir/'.live_index_receipt.json').exists():receipt=settings.data_dir/'.live_index_receipt.json'
     data=json.loads(path.read_text(encoding='utf-8')) if path.exists() else {'papers':[],'summary':{}}
     index=json.loads(receipt.read_text(encoding='utf-8')) if receipt.exists() else {}
     marker=settings.data_dir/'.local_index.json'

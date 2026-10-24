@@ -19,3 +19,5 @@ __pycache__/
 verification/private/
 data/index_build.lock
 data/.local_index.json
+data/.live_manifest.json
+data/.live_index_receipt.json

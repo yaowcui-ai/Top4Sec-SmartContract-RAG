@@ -2,7 +2,7 @@
 
 基于 **LightRAG + FastAPI** 的独立论文阅读与证据问答应用，支持中文提问、`naive` / `mix`、BGE 重排、PDF 页码引用、个人对话历史和账号隔离。
 
-论文来源为 [Academic_Smart_Contract_Papers](https://github.com/hzysvilla/Academic_Smart_Contract_Papers) 的前四个安全会议分区：**IEEE S&P、ACM CCS、USENIX Security、NDSS**。来源固定在 `aede99b97104f2f1dd447922d9b54902a89c81d9`。原目录 217 条，标题去重后 216 篇，本次取得 **126 篇可解析全文**（S&P 29、CCS 29、USENIX 39、NDSS 29）；另有 32 篇缺少可用全文链接、57 篇链接不可用、1 份单页海报未入库。未取得全文的条目不会冒充已读论文。
+论文来源为 [Academic_Smart_Contract_Papers](https://github.com/hzysvilla/Academic_Smart_Contract_Papers) 的前四个安全会议分区：**IEEE S&P、ACM CCS、USENIX Security、NDSS**。首次快照为 `aede99b97104f2f1dd447922d9b54902a89c81d9`；自动任务检查同一仓库最新 README 提交。初始目录 217 条，标题去重后 216 篇，取得 **126 篇可解析全文**（S&P 29、CCS 29、USENIX 39、NDSS 29）；另有 32 篇缺少可用全文链接、57 篇链接不可用、1 份单页海报未入库。未取得全文的条目不会冒充已读论文，更新后的数量以本机网页为准。
 
 本机已验收索引：**4,349 个全文片段、4,490 个结构图节点、4,601 条边**。构建回执见 [data/index_receipt.json](data/index_receipt.json)。
 
@@ -17,6 +17,7 @@
 - 答案引用关联论文标题、会议、年份、PDF 文件页码和原文片段，可打开本机 PDF。
 - Argon2 密码哈希、HttpOnly Cookie、来源校验、个人历史权限控制；账号级幂等，复用同一操作的已保存结果。
 - `processing / completed / failed` 短事务记录，区分检索、生成、数据库保存失败；刷新或超时不会被解释为“没有答案”。
+- Windows 任务每天北京时间09:00检查新增论文，按标题与PDF哈希去重，增量入库；旧论文回执复用，失败恢复旧索引。
 
 ## 架构与范围
 
@@ -81,6 +82,30 @@ docker compose up -d mysql lightrag
 
 后端用 Ctrl+C 关闭，再用 `docker compose stop mysql lightrag` 停止依赖。两种方式不要同时占用 8003。更详细的步骤、Docker Desktop 按钮、账号、排错、备份见 [Word 操作手册](docs/四大顶会区块链智能合约论文问答系统操作手册.docx)。
 
+## 定时新增论文
+
+初始建库后，在 Windows 主机的项目目录安装一次任务：
+
+```powershell
+.\scripts\manage-update-task.ps1 -Action install
+.\scripts\manage-update-task.ps1 -Action status
+```
+
+任务名 `Top4Sec-SmartContract-RAG-DailyUpdate`，每天北京时间 **09:00**；当前登录用户运行，不在任务参数中保存密码。要求电脑开机、用户已登录、Docker引擎与本项目全Docker app/lightrag服务运行。项目已关闭时只记录跳过，不联网、不调用模型、不自动拉起Docker。错过的时间由Windows条件允许时补运行，不保证关机期间每天执行。
+
+```powershell
+.\.venv\Scripts\python.exe -m app.update_papers check   # 只检查目录
+.\.venv\Scripts\python.exe -m app.update_papers run     # 现在下载并增量入库
+.\.venv\Scripts\python.exe -m app.update_papers status  # 本轮/最近结果
+.\scripts\manage-update-task.ps1 -Action disable        # 暂停未来触发
+.\scripts\manage-update-task.ps1 -Action enable         # 恢复触发
+.\scripts\manage-update-task.ps1 -Action remove         # 删除本项目任务
+```
+
+每轮最多10篇；下载和新论文入库各最多自动尝试3次。只处理新标题、新补链接和未超限队列，不每天整批重试旧失效条目。无新增全文时不停服务、无模型调用。有新全文时，先顺序停止 app / LightRAG，在旧索引副本上用固定SDK增量导入，核对旧证据后切换；失败恢复旧库，MySQL和原DocTrace不受影响。更新窗口内网页可能短暂不可用。
+
+实时清单、来源提交快照、任务报告、候选和回滚副本仅保存在本机 `data/.live_*.json`、`runtime/updates/`，不由定时任务提交GitHub。公开目录和收据保留首次建库基线；应用优先读取本机实时清单。上限失败可排错后使用 `app.update_papers retry --paper-id 编号` 主动重新排队，不能重建已入库论文。完整步骤见操作手册第十四节。
+
 ## 与原 DocTrace 隔离
 
 | 组件 | 本项目 |
@@ -92,7 +117,7 @@ docker compose up -d mysql lightrag
 | 应用 / Cookie | 8003 / scpaper_session |
 | 持久化 | 本目录 runtime/ 与 data/ |
 
-数据库名称有代码保护。构建锁、固定内容身份和逐论文回执避免把未验收索引当成可用库；custom KG 不具备标准入库路径的全部恢复日志，因此应停掉本项目 LightRAG 后离线构建，不能并发改写或随意删共享节点。当前没有自动更新、跨进程任务恢复队列或论文全文再分发功能。
+数据库名称有代码保护。构建锁、固定内容身份和逐论文回执避免把未验收索引当成可用库；custom KG 不具备标准入库路径的全部恢复日志，因此只在本项目 LightRAG 停止时写候选副本，不能并发改写或随意删共享节点。论文更新有本机事务恢复；问答仍没有跨进程任务恢复队列，也不提供论文全文再分发。
 
 ## 验证
 
@@ -113,9 +138,13 @@ app/settings.py       项目配置与数据库隔离保护
 app/storage.py        用户、会话、问答表与序列化
 app/corpus.py         四会议目录、公开全文下载、校验和页面解析
 app/index_plan.py     PDF 页面切片和结构图
+app/update_catalog.py 目录差异、受限队列与增量兼容检查
+app/update_runner.py  主机独占锁、离线副本、验收切换与回滚
+app/update_papers.py  更新检查、运行、状态与单篇主动重试
 app/web/              对话网页与本地 Markdown 安全渲染
 scripts/build_index.py  固定 LightRAG SDK 离线索引与验收
 scripts/manage.py     状态、新建用户、本项目数据库备份
+scripts/manage-update-task.ps1  Windows每日09点任务的安装与开关
 data/manifest.json    每篇论文的获取结果与来源
 data/source/          固定目录版本、来源与上游许可证
 docs/                 完整操作手册与实施说明

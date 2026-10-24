@@ -15,6 +15,21 @@ def test_historical_receipt_is_not_proof_of_a_ready_local_index(tmp_path):
     _,index,indexed=catalog_data(replace(Settings(),data_dir=tmp_path))
     assert not indexed and index['status']=='not_built_locally'
 
+def test_updated_live_manifest_and_receipt_take_priority_over_public_baseline(tmp_path):
+    import json
+    from dataclasses import replace
+    from app.rag import catalog_data
+    from app.settings import Settings
+    (tmp_path/'manifest.json').write_text(json.dumps({'papers':[]}))
+    (tmp_path/'index_receipt.json').write_text(json.dumps({'status':'verified','index_id':'baseline','paper_ids':[]}))
+    (tmp_path/'.live_manifest.json').write_text(json.dumps({'papers':[PAPER]}))
+    (tmp_path/'.live_index_receipt.json').write_text(json.dumps({'status':'verified','index_id':'updated','paper_ids':[PAPER['paper_id']]}))
+    (tmp_path/'.local_index.json').write_text(json.dumps({'index_id':'updated'}))
+    for folder,suffix in [('pdfs','.pdf'),('text','.json')]:
+        (tmp_path/folder).mkdir();(tmp_path/folder/(PAPER['paper_id']+suffix)).write_text('local artifact')
+    manifest,index,indexed=catalog_data(replace(Settings(),data_dir=tmp_path))
+    assert indexed=={PAPER['paper_id']} and index['index_id']=='updated'
+
 def test_local_readiness_requires_matching_build_and_present_artifacts(tmp_path):
     import json
     from dataclasses import replace

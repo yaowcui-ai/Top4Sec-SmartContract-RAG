@@ -6,7 +6,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from app.index_plan import page_chunks,build_custom_kg
 
-async def build(execute=False,limit=None):
+async def build(execute=False,limit=None,state_dir=None,manifest_path=None,incremental=False):
     from dotenv import dotenv_values
     from lightrag import LightRAG
     from lightrag.utils import EmbeddingFunc,compute_mdhash_id
@@ -14,21 +14,32 @@ async def build(execute=False,limit=None):
     from lightrag.kg.shared_storage import initialize_pipeline_status
     from app.corpus import atomic_json
     import networkx as nx
+    from app.update_catalog import validate_incremental
+    state=Path(state_dir).resolve() if state_dir else ROOT
+    if not state.is_relative_to(ROOT):raise ValueError('Build state must stay inside this project')
+    live_lock=ROOT/'data/index_build.lock'
+    if state==ROOT and live_lock.exists() and live_lock.read_text(encoding='utf-8').startswith('update:'):
+        raise RuntimeError('A scheduled update owns this index; do not run a second writer')
     env=dotenv_values(ROOT/'.lightrag.env',interpolate=False)
-    manifest=json.loads((ROOT/'data/manifest.json').read_text(encoding='utf-8'))
+    manifest_file=Path(manifest_path) if manifest_path else (ROOT/'data/.live_manifest.json' if (ROOT/'data/.live_manifest.json').exists() else ROOT/'data/manifest.json')
+    manifest=json.loads(manifest_file.read_text(encoding='utf-8'))
     papers=[p for p in manifest['papers'] if p['status']=='parsed' and p.get('page_count',0)>=2]
     print('Full-text papers eligible:',len(papers),'Graph: bibliographic/page structure; no LLM extraction',flush=True)
     if not execute:print('Preview only; add --execute to call the embedding provider.');return
     if not papers:raise RuntimeError('No full-text papers')
     fingerprint=hashlib.sha256(json.dumps({'papers':[(p['paper_id'],p['pdf_sha256']) for p in papers],
         'embedding_model':env['EMBEDDING_MODEL'],'embedding_dim':env['EMBEDDING_DIM'],'chunking':[1200,100],'graph':'bibliographic_pages_v1'},sort_keys=True).encode()).hexdigest()
-    receipts=ROOT/'runtime/index_build/receipts';receipts.mkdir(parents=True,exist_ok=True)
-    build_file=ROOT/'runtime/index_build/build.json'
-    if build_file.exists() and json.loads(build_file.read_text())['index_id']!=fingerprint:
+    receipts=state/'runtime/index_build/receipts';receipts.mkdir(parents=True,exist_ok=True)
+    build_file=state/'runtime/index_build/build.json'
+    if incremental:
+        previous=json.loads(build_file.read_text(encoding='utf-8'))
+        documents={p.stem:json.loads(p.read_text(encoding='utf-8')) for p in receipts.glob('*.json')}
+        validate_incremental(previous,documents,papers,env)
+    elif build_file.exists() and json.loads(build_file.read_text())['index_id']!=fingerprint:
         raise RuntimeError('Corpus or embedding configuration changed; create a new isolated build before replacing a live index.')
     atomic_json(build_file,{'index_id':fingerprint,'status':'building'})
-    lock=ROOT/'data/index_build.lock';lock.write_text(fingerprint)
-    working=ROOT/'runtime/lightrag';working.mkdir(parents=True,exist_ok=True)
+    lock=state/'data/index_build.lock';lock.parent.mkdir(parents=True,exist_ok=True);lock.write_text(fingerprint)
+    working=state/'runtime/lightrag';working.mkdir(parents=True,exist_ok=True)
     async def embed(texts):
         return await openai_embed.func(texts,model=env['EMBEDDING_MODEL'],base_url=env['EMBEDDING_BINDING_HOST'],
             api_key=env['EMBEDDING_BINDING_API_KEY'],max_token_size=8192)
@@ -79,8 +90,9 @@ async def build(execute=False,limit=None):
             'embedding_model':env['EMBEDDING_MODEL'],'embedding_dimension':int(env['EMBEDDING_DIM']),
             'chunk_token_size':1200,'overlap':100,'graph_kind':'bibliographic_and_page_structure',
             'built_at':datetime.now(timezone.utc).isoformat(),'llm_extraction_calls':0}
-        atomic_json(ROOT/'data/index_receipt.json',receipt);atomic_json(build_file,receipt)
-        atomic_json(ROOT/'data/.local_index.json',{'index_id':fingerprint,'workspace':receipt['workspace'],'built_at':receipt['built_at']})
+        output='data/.live_index_receipt.json' if state==ROOT and (ROOT/'data/.live_manifest.json').exists() else 'data/index_receipt.json'
+        atomic_json(state/output,receipt);atomic_json(build_file,receipt)
+        atomic_json(state/'data/.local_index.json',{'index_id':fingerprint,'workspace':receipt['workspace'],'built_at':receipt['built_at']})
         lock.unlink()
         print('VERIFIED',json.dumps({k:receipt[k] for k in ['paper_count','chunk_count','node_count','edge_count']}),flush=True)
     except Exception:
@@ -90,5 +102,6 @@ async def build(execute=False,limit=None):
         raise
 
 if __name__=='__main__':
-    parser=argparse.ArgumentParser();parser.add_argument('--execute',action='store_true');parser.add_argument('--limit',type=int);args=parser.parse_args()
-    asyncio.run(build(args.execute,args.limit))
+    parser=argparse.ArgumentParser();parser.add_argument('--execute',action='store_true');parser.add_argument('--limit',type=int)
+    parser.add_argument('--state-dir',type=Path);parser.add_argument('--manifest',type=Path);parser.add_argument('--incremental',action='store_true');args=parser.parse_args()
+    asyncio.run(build(args.execute,args.limit,args.state_dir,args.manifest,args.incremental))

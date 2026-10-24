@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "real_pinned_sdk": true,
+  "base_papers_reused": 126,
+  "new_papers_imported": 0,
+  "chunk_count_unchanged": true,
+  "old_evidence_preserved": true,
+  "embedding_flushes": 0,
+  "generation_calls_requested": 0,
+  "candidate_promoted": false
+}

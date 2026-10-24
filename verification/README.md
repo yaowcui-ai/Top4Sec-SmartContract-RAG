@@ -4,7 +4,7 @@
 
 | 检查 | 结果 | 范围 |
 | --- | --- | --- |
-| Python 后端 | 38 passed | 目录限定、PDF 校验、切片与 KG、认证、权限、幂等、异常、配置、来源映射与首次克隆 |
+| Python 后端 | 58 passed | 目录、PDF、切片、KG、认证、权限、幂等、配置、首次克隆及增量/回滚/限次 |
 | 临时浏览器场景 | 20 checks passed | 合成数据与临时 SQLite，不调用模型，见 browser.json |
 | 真四会议召回 | 4/4 取得目标论文片段 | 原始探测结果本地留档；脱敏统计见 runtime.json |
 | 真答案生成 | naive / mix 各 1 条完成 | 引用 ID、论文、页码范围、PDF 返回、历史与同键复用通过 |
@@ -13,6 +13,8 @@
 | 数据库备份 | 通过 | 新数据库独立导出，UTF-8 可解码且含实际问答；私有 SQL 不公开 |
 | GitHub Linux CI | 通过 | [backend-tests](https://github.com/yaowcui-ai/Top4Sec-SmartContract-RAG/actions/workflows/tests.yml) |
 | 公开仓库重新克隆 | 5 passed | 首次配置与缺失资料回归；没有本机索引时显示 0 篇可问答 |
+
+定时更新新增验证：已注册当前用户的每日09:00任务，并真实触发一次，结果no_change、LastTaskResult=0，无模型调用或停机。固定LightRAG SDK在隔离副本中复用126篇旧论文，0篇重新导入、0次embedding flush，4349个片段保持不变，测试副本未发布；见 [update_sdk.json](update_sdk.json)。新增论文、跨轮次全文去重、相对链接跨提交限次、候选构建失败、发布后启动失败、进程中断恢复等由临时数据覆盖。当前源站没有新增，不把合成新增场景冒充真实新论文入库。
 
 ## 索引验收
 

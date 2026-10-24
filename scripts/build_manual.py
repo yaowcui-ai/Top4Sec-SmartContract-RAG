@@ -33,9 +33,10 @@ def build():
     header=s.header.paragraphs[0];header.text='四大顶会区块链智能合约论文问答系统  操作手册';font(header.style,size=9)
     footer=s.footer.paragraphs[0];footer.alignment=2
     footer.add_run('第 ');field=OxmlElement('w:fldSimple');field.set(qn('w:instr'),'PAGE');footer._p.append(field);footer.add_run(' 页')
-    lines=(ROOT/'docs/操作手册.md').read_text(encoding='utf-8').splitlines();i=0;in_code=False
+    lines=(ROOT/'docs/操作手册.md').read_text(encoding='utf-8').splitlines();i=0;in_code=False;updates=False
     while i<len(lines):
         line=lines[i];i+=1
+        if line.startswith('## 十四'):updates=True
         if line.startswith('```'):in_code=not in_code;continue
         if in_code:
             p=doc.add_paragraph(line,style='Command');p.paragraph_format.keep_together=True
@@ -54,7 +55,7 @@ def build():
                 cells=t.add_row().cells
                 for j,value in enumerate(values):
                     cells[j].width=Inches(widths[j]);cells[j].vertical_alignment=WD_CELL_VERTICAL_ALIGNMENT.CENTER
-                    p=cells[j].paragraphs[0];p.paragraph_format.space_before=Pt(5);p.paragraph_format.space_after=Pt(5)
+                    p=cells[j].paragraphs[0];p.paragraph_format.space_before=Pt(3 if updates else 5);p.paragraph_format.space_after=Pt(3 if updates else 5)
                     r=p.add_run(value);r.font.size=Pt(10);r.bold=row_index==0
                     pr=cells[j]._tc.get_or_add_tcPr();m=OxmlElement('w:tcMar')
                     for side in ['top','bottom','left','right']:
@@ -68,7 +69,11 @@ def build():
         elif line.startswith('# '):doc.add_paragraph(line[2:],style='Title')
         elif line.startswith('## '):doc.add_paragraph(line[3:],style='Heading 1')
         elif line.startswith('### '):doc.add_paragraph(line[4:],style='Heading 2')
-        else:text(doc.add_paragraph(),line)
+        else:
+            p=doc.add_paragraph();text(p,line)
+            if updates:p.paragraph_format.space_after=Pt(4);p.paragraph_format.line_spacing=1.13
+            if updates and line.endswith('：') and next((x for x in lines[i:] if x.strip()),'').startswith('```'):
+                p.paragraph_format.keep_with_next=True
     out=ROOT/'docs/四大顶会区块链智能合约论文问答系统操作手册.docx';doc.save(out);print(out)
 
 if __name__=='__main__':build()
